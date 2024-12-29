@@ -89,7 +89,8 @@ def main():
         print(summary)
         # split by .<|eot_id|><|start_header_id|>assistant<|end_header_id|> and get second part
         content = summary.split(".<|eot_id|><|start_header_id|>assistant<|end_header_id|>")
-        second_part = content[1]
+        second_part = content[1].split("<|eot_id|>")[0]
+
         print(second_part)
 
         markdown_path = save_summary_markdown(second_part, output_dir, json_file)
