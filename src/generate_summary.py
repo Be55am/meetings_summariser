@@ -1,5 +1,5 @@
 import json
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, TextStreamer
 import torch
 from datetime import datetime
 import os
@@ -16,42 +16,33 @@ def load_transcript(json_file_path):
 
 def generate_summary(transcript):
     """Generate a summary using Llama model."""
-    device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
+    device = "mps" if torch.backends.mps.is_available() else "cpu"
 
-    model_name = "meta-llama/Llama-3.1-8B"
+    system_message = "You are an assistant that produces minutes of meetings from transcripts, with summary, key discussion points, takeaways and action items with owners, in markdown."
+    user_prompt = f"Below is an extract transcript of a Denver council meeting. Please write minutes in markdown, including a summary with attendees, location and date; discussion points; takeaways; and action items with owners.\n{transcript}"
 
-    try:
-        tokenizer = AutoTokenizer.from_pretrained(model_name)
-        model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            torch_dtype=torch.float16,
-            device_map="auto"
-        )
-        model.to(device)
+    messages = [
+        {"role": "system", "content": system_message},
+        {"role": "user", "content": user_prompt}
+    ]
 
-        prompt = (f"Please write minutes in markdown, including a summary with attendees, location and date; discussion points; takeaways;"
-                  f" and action items with owners of the following transcript:\n\n{transcript}\n\nSummary:")
+    model_name = "meta-llama/Meta-Llama-3.1-8B-Instruct"
 
-        inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=4096)
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    tokenizer.pad_token = tokenizer.eos_token
+    inputs = tokenizer.apply_chat_template(messages, return_tensors="pt").to(device)
+    streamer = TextStreamer(tokenizer)
 
-        # Changed parameters to use max_new_tokens instead of max_length
-        outputs = model.generate(
-            **inputs,
-            max_new_tokens=150,  # Controls length of the generated summary
-            num_return_sequences=1,
-            temperature=0.7,
-            top_p=0.95,
-            do_sample=True,
-            pad_token_id=tokenizer.eos_token_id
-        )
+    # Remove quantization config and load model normally
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        device_map="auto",
+        torch_dtype=torch.float16  # Use float16 instead of 4-bit quantization
+    )
 
-        summary = tokenizer.decode(outputs[0], skip_special_tokens=True)
-        return summary.split("Summary:")[1].strip()
-
-    except Exception as e:
-        print(f"Error generating summary: {e}")
-        return None
+    outputs = model.generate(inputs, max_new_tokens=2000, streamer=streamer)
+    response = tokenizer.decode(outputs[0])
+    return response
 
 def save_summary_markdown(summary, output_dir, input_filename):
     """Save the summary as a markdown file."""
@@ -96,8 +87,12 @@ def main():
         print("\nGenerated Summary:")
         print("-----------------")
         print(summary)
+        # split by .<|eot_id|><|start_header_id|>assistant<|end_header_id|> and get second part
+        content = summary.split(".<|eot_id|><|start_header_id|>assistant<|end_header_id|>")
+        second_part = content[1]
+        print(second_part)
 
-        markdown_path = save_summary_markdown(summary, output_dir, json_file)
+        markdown_path = save_summary_markdown(second_part, output_dir, json_file)
         if not markdown_path:
             print("Failed to save summary as markdown")
     else:
