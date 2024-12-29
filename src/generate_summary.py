@@ -29,7 +29,8 @@ def generate_summary(transcript):
         )
         model.to(device)
 
-        prompt = f"Please provide a concise summary of the following transcript:\n\n{transcript}\n\nSummary:"
+        prompt = (f"Please write minutes in markdown, including a summary with attendees, location and date; discussion points; takeaways;"
+                  f" and action items with owners of the following transcript:\n\n{transcript}\n\nSummary:")
 
         inputs = tokenizer(prompt, return_tensors="pt", truncation=True, max_length=4096)
         inputs = {k: v.to(device) for k, v in inputs.items()}
