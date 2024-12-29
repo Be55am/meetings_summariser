@@ -1,5 +1,6 @@
-torch
+--find-links https://download.pytorch.org/whl/torch_stable.html
+torch>=2.1.0
 transformers>=4.30.0
-librosa
-soundfile
+librosa>=0.10.0
+soundfile>=0.12.1
 numpy>=1.24.0

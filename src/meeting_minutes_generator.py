@@ -1,5 +1,6 @@
 import json
 import logging
+import platform
 from datetime import datetime
 
 import librosa
@@ -17,11 +18,25 @@ class MeetingMinutesGenerator:
     def __init__(self):
         """Initialize the meeting minutes generator with Whisper model"""
         try:
-            self.device = "cuda" if torch.cuda.is_available() else "cpu"
-            logger.info(f"Using device: {self.device}")
+            # Check if MPS (Apple Silicon GPU) is available
+            if torch.backends.mps.is_available():
+                self.device = torch.device("mps")
+                logger.info("Using Apple Silicon GPU (MPS)")
+            elif torch.cuda.is_available():
+                self.device = torch.device("cuda")
+                logger.info("Using NVIDIA GPU (CUDA)")
+            else:
+                self.device = torch.device("cpu")
+                logger.info("Using CPU - No GPU available")
+
+            logger.info(f"PyTorch version: {torch.__version__}")
+            logger.info(f"System platform: {platform.platform()}")
 
             # Load model and processor
-            self.model = WhisperForConditionalGeneration.from_pretrained(MODEL_CONFIG["model_id"]).to(self.device)
+            self.model = WhisperForConditionalGeneration.from_pretrained(
+                MODEL_CONFIG["model_id"],
+                torch_dtype=torch.float32  # Ensure float32 for MPS compatibility
+            ).to(self.device)
             self.processor = WhisperProcessor.from_pretrained(MODEL_CONFIG["model_id"])
 
             # Maximum length for audio chunks in seconds
