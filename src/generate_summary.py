@@ -74,8 +74,8 @@ def save_summary_markdown(summary, output_dir, input_filename):
         return None
 
 def main():
-    json_file = "/Users/bessam/IdeaProjects/ai_generated/llms_lab/llms_testing/output/minutes/minutes_20241229_1951.json"
-    output_dir = "/Users/bessam/IdeaProjects/ai_generated/llms_lab/llms_testing/output/summaries"
+    json_file = "../output/minutes/minutes_20241229_1951.json"
+    output_dir = "../output/summaries"
 
     transcript = load_transcript(json_file)
     if not transcript:

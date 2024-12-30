@@ -197,7 +197,7 @@ def main():
         generator = MeetingMinutesGenerator()
 
         # Example usage (replace with your audio file path)
-        audio_path = "/Users/bessam/IdeaProjects/ai_generated/llms_lab/llms_testing/resources/denver_extract.mp3"
+        audio_path = "../resources/denver_extract.mp3"
         output_filename = f"minutes_{datetime.now().strftime('%Y%m%d_%H%M')}.json"
 
         # Generate transcript
